@@ -7,17 +7,16 @@ export function useGame(roomCode, playerId, playerName) {
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const roomRef = roomCode ? ref(db, `rooms/${roomCode}`) : null;
-
   // Subscribe to game state
-  useEffect(() => {
-    if (!roomRef) return;
-    const unsub = onValue(roomRef, snap => {
-      setGame(snap.val());
-      setLoading(false);
-    });
-    return () => unsub();
-  }, [roomCode]);
+useEffect(() => {
+  if (!roomCode) return;
+  const r = ref(db, `rooms/${roomCode}`);
+  const unsub = onValue(r, snap => {
+    setGame(snap.val());
+    setLoading(false);
+  });
+  return () => unsub();
+}, [roomCode]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
