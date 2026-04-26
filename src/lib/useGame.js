@@ -7,16 +7,17 @@ export function useGame(roomCode, playerId, playerName) {
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const r = () => ref(db, `rooms/${roomCode}`);
+
   // Subscribe to game state
-useEffect(() => {
-  if (!roomCode) return;
-  const r = ref(db, `rooms/${roomCode}`);
-  const unsub = onValue(r, snap => {
-    setGame(snap.val());
-    setLoading(false);
-  });
-  return () => unsub();
-}, [roomCode]);
+  useEffect(() => {
+    if (!roomCode) return;
+    const unsub = onValue(ref(db, `rooms/${roomCode}`), snap => {
+      setGame(snap.val());
+      setLoading(false);
+    });
+    return () => unsub();
+  }, [roomCode]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ useEffect(() => {
   }, []);
 
   const startGame = useCallback(async () => {
-    await update(roomRef, {
+    await update(r(), {
       phase: PHASES.WRITING,
       round: 1,
       score: 0,
@@ -73,7 +74,7 @@ useEffect(() => {
       guessResult: null,
       guess: "",
     });
-  }, [roomRef]);
+  }, [roomCode]);
 
   const submitClue = useCallback(async (word) => {
     await update(ref(db, `rooms/${roomCode}/clues`), {
@@ -83,39 +84,39 @@ useEffect(() => {
 
   const revealClues = useCallback(async () => {
     const processed = findDuplicates(game?.clues || {});
-    await update(roomRef, {
+    await update(r(), {
       phase: PHASES.REVEAL,
       revealedClues: processed,
     });
-  }, [roomRef, game]);
+  }, [roomCode, game]);
 
   const proceedToGuess = useCallback(async () => {
-    await update(roomRef, { phase: PHASES.GUESS });
-  }, [roomRef]);
+    await update(r(), { phase: PHASES.GUESS });
+  }, [roomCode]);
 
   const submitGuess = useCallback(async (guessWord) => {
     const correct = guessWord.trim().toLowerCase().replace(/[^a-z]/g, "") ===
       game?.secretWord?.toLowerCase();
-    await update(roomRef, {
+    await update(r(), {
       phase: PHASES.RESULT,
       guess: guessWord,
       guessResult: correct ? "correct" : "wrong",
       score: (game?.score || 0) + (correct ? 1 : 0),
     });
-  }, [roomRef, game]);
+  }, [roomCode, game]);
 
   const skipGuess = useCallback(async () => {
-    await update(roomRef, {
+    await update(r(), {
       phase: PHASES.RESULT,
       guess: "",
       guessResult: "skip",
     });
-  }, [roomRef]);
+  }, [roomCode]);
 
   const nextRound = useCallback(async () => {
     const playerCount = Object.keys(game?.players || {}).length;
     const nextIdx = ((game?.guesserIdx || 0) + 1) % playerCount;
-    await update(roomRef, {
+    await update(r(), {
       phase: PHASES.WRITING,
       round: (game?.round || 0) + 1,
       guesserIdx: nextIdx,
@@ -125,17 +126,15 @@ useEffect(() => {
       guessResult: null,
       guess: "",
     });
-  }, [roomRef, game]);
+  }, [roomCode, game]);
 
   const kickPlayer = useCallback(async (pid) => {
-    const updates = {};
-    updates[`players/${pid}`] = null;
-    await update(roomRef, updates);
-  }, [roomRef]);
+    await update(r(), { [`players/${pid}`]: null });
+  }, [roomCode]);
 
   const endGame = useCallback(async () => {
-    await set(roomRef, null);
-  }, [roomRef]);
+    await set(r(), null);
+  }, [roomCode]);
 
   return {
     game, loading,
