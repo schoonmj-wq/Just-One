@@ -190,11 +190,8 @@ export default function App() {
   // In a room — show game
   if (roomCode && game && playerId) {
     // Check player still in game
-    if (!game.players?.[playerId]) {
-      session.clear();
-      setRoomCode(null); setPlayerId(null); setPlayerName("");
-      setScreen("home");
-      return null;
+	if (!game.players?.[playerId]) {
+  	return null;
     }
 
     return (
